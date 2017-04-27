@@ -13,20 +13,22 @@ function Y = PFBfiltNoSynth(inp_signal,pfbmat,output_nt)
 %   -> output_nt is the MATLAB numerictype object to which the output
 %      values are cast into. Set output_nt = 0 for no casting allowing the
 %      output to take on floating values.
-%   -> Y is a A x Q x M matrix, where each row is the output of a given
+
+%   -> Outputs a A x Q x M matrix, where each row is the output of a given
 %      channel. Q = floor(N/A)-B+1;
 
     threadcount = size(inp_signal,3);
     order = size(pfbmat,1);
     taps = size(pfbmat,2);
-    % truncate signal to nearest multiple of filter order
+    % truncate signal to nearest multiple of filter window size
     r = mod(size(inp_signal,2),order);
     if r ~= 0
         inp_signal = inp_signal(:,1:end-r,:);
     end
     % flip input for convolution
+    % important to do this before reshape so the ordering comes out right
     inp_signal = fliplr(inp_signal);
-    % convert input signal into polyphase form
+    % reshape (ie. time multiplex) input signal into polyphase form
     inp_signal = reshape(inp_signal,order,[],threadcount);
     
     % pre-generate output matrix
@@ -43,7 +45,7 @@ function Y = PFBfiltNoSynth(inp_signal,pfbmat,output_nt)
     
     % Do the filtering (shift, multiply and sum)
     % Normally would shift signal into filter from left side
-    % To make indexing easier, I will flip both filter and signal so the
+    % To make indexing easier, flip both filter and signal so the
     % signal shifts into the filter from the right side
     inp_signal = fliplr(inp_signal);
     pfbmat = fliplr(pfbmat);
