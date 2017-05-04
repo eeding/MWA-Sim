@@ -1,6 +1,48 @@
-function [output] = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,bithist)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST)
+%PFBCHANNELIZE uses PFBFilterNoSynth and fi_radix2fft to perform the
+%              two stage PFB filtering in the MWA DSP simulation.
+%   PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST) - passes S_IN
+%   through the 2-stage PFB simulation and produces an output containing 
+%   the signal at various stages of the process.
+%   
+%   -> S_IN must be a single row vector containing the input signal. S_IN
+%      can be floating point, but it will be implicitly casted into fi
+%      representation in the filtering process.
+%   -> CONFIG must be a list of two structs: 
+%      {1} for the first PFB, {2} for the second PFB
+%      Each struct must contain the following fields:
+%      coeff - The floating point coefficients for the PFB
+%      fi_coeff - The fixed point coefficients for the PFB
+%      twiddle - The fixed point twiddle factors for the FFT in the PFB
+%      output_nt - The Numeric Type requirement for the output of the PFB.
+%                  (See MATLAB Documentation for information regarding FI
+%                  objects and Numeric Types).
+%   -> CHSEL must be a row vector containing the channel indices of the
+%      coarse channels selected to continue onto the second PFB. Index 1 is
+%      baseband, Index 256 is highest subband. Invalid values will
+%      automatically be corrected in a rounding modulo 256 scheme, but
+%      behavior is not guaranteed.
+%   -> QB must be a vector of length 2 containing information about the
+%      number of bits kept in the re-quantization that occcurs after each
+%      stage. To match the physical system, use [5,4], which makes 5 bit
+%      quantization after PFB1 and 4 bit quantization after PFB2.
+%      Constraints: 0 < QB(1) < 15, 0 < QB(2) < 23, integer values only.
+%      Set any (or both) QB value to 0 to skip re-quantization step for the
+%      corresponding stage.
+%   -> BITHIST is a debug flag. If set, bit histograms at various points
+%      will be computed and included in the output.
+%
+%   -> Outputs a list containing two structs:
+%      {1} has data for first stage, {2} has data for the second stage
+%      Each struct should contain the following fields:
+%      out - The output of the PFB after the re-quantization
+%      fbins - The frequency values associated with the channels in the
+%              output.
+%      (More outputs TBD)
+%      If BITHIST is set, there will be additional fields with name prefix
+%      "bithist" that correspond to the bit histograms at various points in
+%      the particular PFB stage.
+
 
     output = {struct(),struct()};
 
@@ -38,10 +80,10 @@ function [output] = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,bithist)
     % Calculate the bit histograms for stage 1
     % Going up to 24 bits
     bmax = 24;
-    if bithist
+    if BITHIST
         output{1}.bithist_inp = fiBitHist(S_IN,bmax);
         output{1}.bithist_filtout = fiBitHist(X,bmax);
-        output{1}.bithist_spec = fiBitHist(spec,bmax);
+        output{1}.bithist_fftout = fiBitHist(spec,bmax);
     end
     
     % Check if there's enough datapoints to continue to stage 2
@@ -63,13 +105,14 @@ function [output] = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,bithist)
         [spec,freq] = fi_radix2fft(X,CONFIG{2}.twiddle);
         % 2nd stage frequency bin is relative to each coarse bin
         freq = (FS/n1).*freq;
-        % Reorder to make sure frequencies come out in order
+        % Reorder to make sure frequencies come out negative first
         spec = [spec(freq<0,:,:);spec(freq>=0,:,:)];
         freq = [freq(freq<0);freq(freq>=0)];
         
         % Absolute center frequencies is cross sum of coarse + fine
         % row # index fine freq, col # index coarse freq
         freq = repmat(freq,1,length(coarse_freq))+repmat(coarse_freq',length(freq),1);
+        
         % Now merge fine and coarse dimensions together
         spec = permute(spec,[1,3,2]);
         spec = reshape(spec,[],size(spec,3));
@@ -77,7 +120,7 @@ function [output] = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,bithist)
         freq = reshape(freq,[],size(freq,3));
         
         % Quantize to fewer bits if QB(2) is set
-        if (QB(2) > 0 && QB(2) < 24)
+        if (QB(2) > 0 && QB(2) < 23)
             spec = quantize(spec/2^(24-QB(2)),numerictype(1,QB(2),0),'Round','Saturate');
         end
         
@@ -86,10 +129,10 @@ function [output] = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,bithist)
         output{2}.fbins = freq;
         
         % Do more bit histograms if flag is set
-        if bithist
-            output{2}.inp = fiBitHist(S_IN,bmax);
+        if BITHIST
+            output{2}.bithist_inp = fiBitHist(S_IN,bmax);
             output{2}.bithist_filtout = fiBitHist(X,bmax);
-            output{2}.bithist_spec = fiBitHist(spec,bmax);
+            output{2}.bithist_fftout = fiBitHist(spec,bmax);
         end
     end
 end

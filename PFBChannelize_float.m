@@ -1,6 +1,11 @@
 function [output] = PFBChannelize_float(FS,S_IN,CONFIG,CHSEL,CHGAIN)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+%PFBCHANNELIZE_FLOAT uses PFBFilterNoSynth to perform the two stage PFB 
+%                    filtering in the floating point MWA DSP simulation.
+%
+%   This function operates in the same way as PFBCHANNELIZE, except it
+%   operates on floating point input and performs no quantization and does
+%   not have any quantization logic in the filtering process. It makes use
+%   of MATLAB's built in FFT function instead of fi_radix2fft.
 
     output = {struct(), struct()};
     n1 = size(CONFIG{1}.coeff,1); % this should be 512

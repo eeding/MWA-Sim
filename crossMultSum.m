@@ -1,6 +1,22 @@
 function [output] = crossMultSum(sig1,sig2,FS,T,C)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+%CROSSMULTSUM simulates the accumulation and summation stage of the MWA DSP
+%             chain.
+%
+%   crossMultSum(sig1,sig2,FS,T,C) - pointwise multiplies sig1 and sig2
+%   which are both sampled at FS Hz. The product is sum over T seconds and
+%   over every C adjacent channels.
+%
+%   -> sig1 - M x N matrix where every row corresponds to a partiular
+%             signal channel and every column is a time index.
+%   -> sig2 - Another matrix with the same specification as sig1. The
+%             pointwise product of sig2 and sig1 will be computed.
+%   -> FS - The sampling frequency in Hz of all the input channels in both
+%           signal sets.
+%   -> T - The duration in seconds over which the product of sig1 and sig2
+%          should be summed.
+%   -> C - The number of adjacent channels over which the product of sig1
+%          and sig2 should be summed. C must divide 128 since the
+%          simulation assumes M = 3072 = 24 sets of 128 fine channels.
     
     if ~isequal(size(sig1),size(sig2))
         error('ERROR: Signal dimensions unequal!');

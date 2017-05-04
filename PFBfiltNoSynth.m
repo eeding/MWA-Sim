@@ -1,8 +1,9 @@
 function Y = PFBfiltNoSynth(inp_signal,pfbmat,output_nt)
-%PFBFILTNOSYNTH Fixed point Polyphase filtering with no synthesis.
+%PFBFILTNOSYNTH Fixed point-Compatible Polyphase filtering with no synthesis.
 %   PFBfiltNoSynth(inp_signal,pfbmat,output_nt) - filters inp_signal using
-%   the polyphase filter given by pfbmat, but returns output without
+%   the polyphase filter given by pfbmat, and returns output without
 %   combining individual phase channels.
+%
 %   -> inp_signal must be a 1 x N x M matrix, where N is the time dimension
 %      and M is the index for parallel signals that can be computed
 %      simultaneously. (If single signal, M = 1)
@@ -13,9 +14,11 @@ function Y = PFBfiltNoSynth(inp_signal,pfbmat,output_nt)
 %   -> output_nt is the MATLAB numerictype object to which the output
 %      values are cast into. Set output_nt = 0 for no casting allowing the
 %      output to take on floating values.
-
-%   -> Outputs a A x Q x M matrix, where each row is the output of a given
-%      channel. Q = floor(N/A)-B+1;
+%
+%   -> Outputs a A x Q x M matrix, where the first dimension indexes the
+%      frequency channel, the second dimension indexes the time, and the
+%      third dimension indexes the signal (if input has parallel signals).
+%      Q = floor(N/A)-B+1;
 
     threadcount = size(inp_signal,3);
     order = size(pfbmat,1);
@@ -34,6 +37,9 @@ function Y = PFBfiltNoSynth(inp_signal,pfbmat,output_nt)
     % pre-generate output matrix
     outputLength = size(inp_signal,2)-taps+1;
     Y = zeros(order,outputLength,threadcount);
+    
+    % output_nt specifies fi type of output
+    % if 0, assume floating point, so input must be cast to float as well
     if output_nt~=0
        Y = fi(Y,output_nt);
        Y.fimath = pfbmat.fimath;

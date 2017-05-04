@@ -1,18 +1,11 @@
 function W = fi_radix2twiddles(n) 
-%FI_RADIX2TWIDDLES  Twiddle factors for radix-2 FFT example.
-%   W = FI_RADIX2TWIDDLES(N) computes the length N-1 vector W of
-%   twiddle factors to be used in the FI_M_RADIX2FFT example code.
+%FI_RADIX2TWIDDLES  Twiddle factors for radix-2 FFT.
+%   FI_RADIX2TWIDDLES(N) - computes the length N-1 vector W of
+%   twiddle factors to be used in the FI_M_RADIX2FFT function.
 %
-%   See also FI_RADIX2FFT_DEMO.
+%   This function was based on the implementation given here:
+%   https://www.mathworks.com/help/fixedpoint/ug/convert-fast-fourier-transform-fft-to-fixed-point.html
 
-%   Reference:
-%
-%   Twiddle factors for Algorithm 1.6.2, p. 45, Charles Van Loan,
-%   Computational Frameworks for the Fast Fourier Transform, SIAM,
-%   Philadelphia, 1992.
-%
-%   Copyright 2003-2011 The MathWorks, Inc.
-%     
 
 t = log2(n);
 if floor(t) ~= t
