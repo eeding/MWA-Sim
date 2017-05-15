@@ -1,3 +1,22 @@
+%% Instructions
+% 1. Set the appropriate parameters and evaluate the parameters section
+% 2. Evaluate Simulation section to produce the data. Output should appear
+% in SIM_OUTPUT struct which is formated as shown below.
+% 3. Optionally make a plot of time slices (crude plots, probably not
+% helpful other than debugging).
+%{
+    SIM_OUTPUT
+        -floatsim (floating point simulation data if applicable)
+            - visibilities = visibilities matrix (freq bin x time) 
+            - visfbins = frequency labels for freq bin of visibilities
+            - sig (for debuggin purposes, signal data pulled from within PFB)
+                -{1} Signal 1 Data
+                    - See PFBChannelize for details about fields
+                -{2} Signal 2 Data
+                    - See PFBChannelize for details about fields
+        -intsim (fixed point simulation data if applicable)
+            - Same format as floatsim
+%}
 %% Set Parameters
 
 clear;
@@ -6,7 +25,7 @@ clear;
 % If set false, will use Gaussian input with given SNR and noise sigma = 4
 SIM_PARAM.USE_COS_INPUT = true;
 
-% set true if want to save output data struct to file
+% set true if want to save output (and input+params) data struct to file
 SAVE_OUTPUT = false;
 
 % Flags for options
@@ -25,7 +44,7 @@ D = 10;
 T = 0.001;
 % Number of adjacent Fine Channel bins that are to be summed.
 % C must be a factor of 128;
-C = 4;
+C = 1;
 % Number of bits for quantization in channelizer
 % QB(1) = quantizer after FFB1, QB(2) = quantizer after PFB2;
 % Set value to 0 for no quantization

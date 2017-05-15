@@ -1,3 +1,9 @@
+%%
+% This is a script I quickly hacked together by copy-pasting a portion of
+% the mainsim script. It was used to do the PFB characterization plots.
+% Several of things are unexplained, but you should be able piece it
+% together if you read coeff_gen.m and mainsim.m
+%%
 clear;load PFBsettings.mat;
 
 % PFBdata{1}.coeff = ones(size(PFBdata{1}.coeff));

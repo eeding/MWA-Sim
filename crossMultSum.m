@@ -28,8 +28,9 @@ function [output] = crossMultSum(sig1,sig2,FS,T,C)
     
     % Make sure signals are floating point before computing
     % Conjugate one of them in case complex value
-    sig1 = double(sig1);
-    sig2 = double(sig2);
+    % Divide by 127 after casting (This is what hardware does)
+    sig1 = double(sig1)/127;
+    sig2 = conj(double(sig2)/127);
     
     % Perform pointwise multiplication
     xprod = sig1.*sig2;
@@ -53,6 +54,7 @@ function [output] = crossMultSum(sig1,sig2,FS,T,C)
     end
     % reshape so elements to be summed are in same column
     output = reshape(xprod,sumsize,[],size(xprod,3));
+    % sum over time
     output = sum(output,1);
 
     % Optionally sum over adjacent C channels
@@ -65,7 +67,7 @@ function [output] = crossMultSum(sig1,sig2,FS,T,C)
         % Final output has the channels as rows and the time as columns
         output = permute(output,[2,3,1]);
     else
-        % otherwise rotate just back channel dimension
+        % otherwise just rotate back channel dimension
         output = permute(output,[3,2,1]);
     end
         

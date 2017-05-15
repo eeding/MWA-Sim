@@ -139,6 +139,9 @@ function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST,DOFLOAT)
         
         % Absolute center frequencies is cross sum of coarse + fine
         % row # index fine freq, col # index coarse freq
+        % IMPORTANT: Due to even # sub bands and one centered at 0, the
+        % highest and lowest half band share the same band. That bin is
+        % assumed to be the highest fine frequency bin.
         freq = repmat(freq,1,length(coarse_freq))+repmat(coarse_freq.',length(freq),1);
         
         % Now merge fine and coarse dimensions together

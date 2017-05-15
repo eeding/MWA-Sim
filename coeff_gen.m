@@ -11,8 +11,8 @@ clear;
 % Change filter bit precision by tweaking using these:
 bitlen.pfb1 = 12;
 bitlen.pfb1out = 16;
-bitlen.pfb2 = 32;
-bitlen.pfb2out = 32;
+bitlen.pfb2 = 32;       % This value not specified in design docs I was given.
+bitlen.pfb2out = 32;    % This value not specified in design docs I was given.
 % Set to true when ready to save to PFBsettings.mat
 SAVE_DATA = true;
 
