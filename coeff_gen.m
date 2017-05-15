@@ -8,17 +8,24 @@ each filter.
 
 %%
 clear;
+% Change filter bit precision by tweaking using these:
+bitlen.pfb1 = 12;
+bitlen.pfb1out = 16;
+bitlen.pfb2 = 32;
+bitlen.pfb2out = 32;
+% Set to true when ready to save to PFBsettings.mat
+SAVE_DATA = true;
+
 % Generate coefficients for Coarse PFB
 N = 512;
 k = 8;
 beta = 5;
-bitlen = 12;
 h = fir1(N*k-1,1/N,'low',kaiser(N*k,beta))';
 h = h./max(h);
 coarsePFBcoeff = reshape(h,N,k);
 
 % Quantize to integer
-h = (2^(bitlen-1) - 1)*h;
+h = (2^(bitlen.pfb1-1) - 1)*h;
 
 % Fine PFB coefficents are pre-given, load from file.
 rawcoeff = csvread('pfb2coeff.csv');
@@ -26,24 +33,24 @@ fi_finePFBcoeff = reshape(rawcoeff,128,12);
 finePFBcoeff = fi_finePFBcoeff./max(rawcoeff);
 
 % Define the numeric types for PFB coefficients
-nt_coarsepfb = numerictype(1,12,0);
-nt_finepfb = numerictype(1,24,0);
+nt_coarsepfb = numerictype(1,bitlen.pfb1,0);
+nt_finepfb = numerictype(1,bitlen.pfb2,0);
 % Define the fixed-point math logic for each
 fm_coarsepfb = fimath('RoundingMethod','Round',...
                           'OverflowAction','Saturate',...
                           'SumMode','SpecifyPrecision',...
-                          'SumWordLength',16,...
+                          'SumWordLength',bitlen.pfb1out,...
                           'SumFractionLength',0,...
                           'ProductMode','SpecifyPrecision',...
-                          'ProductWordLength',16,...
+                          'ProductWordLength',bitlen.pfb1out,...
                           'ProductFractionLength',0);
 fm_finepfb = fimath('RoundingMethod','Round',...
                           'OverflowAction','Saturate',...
                           'SumMode','SpecifyPrecision',...
-                          'SumWordLength',24,...
+                          'SumWordLength',bitlen.pfb2out,...
                           'SumFractionLength',0,...
                           'ProductMode','SpecifyPrecision',...
-                          'ProductWordLength',24,...
+                          'ProductWordLength',bitlen.pfb2out,...
                           'ProductFractionLength',0);
 % Cast coefficients into fixed point
 fi_coarsePFBcoeff = fi(reshape(h,N,k),nt_coarsepfb);
@@ -52,12 +59,12 @@ fi_coarsePFBcoeff.fimath = fm_coarsepfb;
 fi_finePFBcoeff.fimath = fm_finepfb;
 
 % Define the twiddle coefficients of the fixed point FFTs
-fft512twiddle = fi(radix2twiddles(512),1,12);
-fft128twiddle = fi(radix2twiddles(128),1,24); 
+fft512twiddle = fi(radix2twiddles(512),1,bitlen.pfb1);
+fft128twiddle = fi(radix2twiddles(128),1,bitlen.pfb2); 
 
 % Define the output numeric types for the PFB stage (after FFT)
-nt_coarsepfb_out = numerictype(1,16,0);
-nt_finepfb_out = numerictype(1,24,0);
+nt_coarsepfb_out = numerictype(1,bitlen.pfb1out,0);
+nt_finepfb_out = numerictype(1,bitlen.pfb2out,0);
 
 % Package everything into a list of two structs 
 coarse.coeff = coarsePFBcoeff;
@@ -69,7 +76,10 @@ fine.fi_coeff = fi_finePFBcoeff;
 fine.twiddle = fft128twiddle;
 fine.output_nt = nt_finepfb_out;
 PFBdata = {coarse, fine};
-% save('PFBsettings.mat','PFBdata');
+
+if SAVE_DATA
+    save('PFBsettings.mat','PFBdata');
+end
 
 %% Plots
 
