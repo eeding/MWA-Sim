@@ -52,8 +52,8 @@ fi_coarsePFBcoeff.fimath = fm_coarsepfb;
 fi_finePFBcoeff.fimath = fm_finepfb;
 
 % Define the twiddle coefficients of the fixed point FFTs
-fft512twiddle = fi(fi_radix2twiddles(512),1,12);
-fft128twiddle = fi(fi_radix2twiddles(128),1,24); 
+fft512twiddle = fi(radix2twiddles(512),1,12);
+fft128twiddle = fi(radix2twiddles(128),1,24); 
 
 % Define the output numeric types for the PFB stage (after FFT)
 nt_coarsepfb_out = numerictype(1,16,0);

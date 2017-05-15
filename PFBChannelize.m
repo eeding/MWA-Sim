@@ -1,5 +1,5 @@
-function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST)
-%PFBCHANNELIZE uses PFBFilterNoSynth and fi_radix2fft to perform the
+function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST,DOFLOAT)
+%PFBCHANNELIZE uses PFBFilterNoSynth and radix2fft to perform the
 %              two stage PFB filtering in the MWA DSP simulation.
 %   PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST) - passes S_IN
 %   through the 2-stage PFB simulation and produces an output containing 
@@ -31,6 +31,8 @@ function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST)
 %      corresponding stage.
 %   -> BITHIST is a debug flag. If set, bit histograms at various points
 %      will be computed and included in the output.
+%   -> DOFLOAT is a debug flag. If set, all computation will be performed
+%      using floating point.
 %
 %   -> Outputs a list containing two structs:
 %      {1} has data for first stage, {2} has data for the second stage
@@ -45,8 +47,13 @@ function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST)
 
 
     output = {struct(),struct()};
+    % Set maximum number of bits for bit histogram if applicable
+    if ~DOFLOAT && BITHIST
+        bmax = 32;
+    end
 
     n1 = size(CONFIG{1}.fi_coeff,1); % this should be 512
+    n2 = size(CONFIG{2}.coeff,1); % this should be 128
     if (~isequal(size(size(CHSEL)),[1,2]))
         error('ERROR: CHSEL must be row vector!');
     else
@@ -60,27 +67,40 @@ function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST)
         CHGAIN = ones(size(CHSEL));
     end
    
-    % First stage straightforward filtering
-    X = PFBfiltNoSynth(S_IN,CONFIG{1}.fi_coeff,CONFIG{1}.output_nt);
-    if size(X,2) < 1
-        error('Insufficient data.');
+    % Perform first stage filtering
+    if DOFLOAT
+        X = PFBfiltNoSynth(double(S_IN),CONFIG{1}.coeff,0);
+    else
+        X = PFBfiltNoSynth(S_IN,CONFIG{1}.fi_coeff,CONFIG{1}.output_nt);
     end
-    [spec,freq] = fi_radix2fft(X,CONFIG{1}.twiddle);
+    if size(X,2) < 1
+        error('Insufficient data for 1st FFT.');
+    end
+    if DOFLOAT
+        spec = radix2fft(X,radix2twiddles(n1));
+    else
+        spec = radix2fft(X,CONFIG{1}.twiddle);
+    end
+    freq = [(0:1/n1:0.5),((-0.5+1/n1):1/n1:-1/n1)].';
+    freq = FS.*freq;
 
-    % Quantize to fewer bits if QB(1) is set
-    if (QB(1) > 0 && QB(1) < 15)
-        S_IN = quantize(S_IN/2^(16-QB(1)),numerictype(1,QB(1),0),'Round','Saturate');
+    % Quantize to fewer bits if fixed point and QB(1) is set
+    if ~DOFLOAT && (QB(1) > 0 && QB(1) < 15)
+        spec = quantize(spec/2^(16-QB(1)),numerictype(1,QB(1),0),'Round','Saturate');
     end
     
     % Store results for first stage
-    output{1}.out = spec.removefimath;
+    if DOFLOAT
+        output{1}.out = spec;
+    else
+        output{1}.out = spec.removefimath;
+    end
+    % Only take first half of spectrum for PFB1
     output{1}.out = output{1}.out(1:ceil(n1/2),:,:);
-    output{1}.fbins = FS.*freq(1:ceil(n1/2),:,:);
+    output{1}.fbins = freq(1:ceil(n1/2),:,:);
     
     % Calculate the bit histograms for stage 1
-    % Going up to 24 bits
-    bmax = 24;
-    if BITHIST
+    if exist('bmax','var')
         output{1}.bithist_inp = fiBitHist(S_IN,bmax);
         output{1}.bithist_filtout = fiBitHist(X,bmax);
         output{1}.bithist_fftout = fiBitHist(spec,bmax);
@@ -88,6 +108,8 @@ function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST)
     
     % Check if there's enough datapoints to continue to stage 2
     if(size(output{1}.out,2) < length(CONFIG{2}.coeff(:)))
+        % Returning instead of throwing error so first stage data is still
+        % returned
         disp("Not enough samples to proceed to stage 2!");
         return
     else
@@ -95,15 +117,21 @@ function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST)
         S_IN = output{1}.out(CHSEL,:,:);
         coarse_freq = output{1}.fbins(CHSEL);
         % Scale each channel by appropriate gain
-        S_IN = S_IN.*repmat(CHGAIN',1,size(S_IN,2),size(S_IN,3));
-        
+        S_IN = S_IN.*repmat(CHGAIN.',1,size(S_IN,2),size(S_IN,3));
         % Move coarse channel index to dimension 3 so they will be acted on
         % in parallel for second stage
         X = permute(S_IN,[3,2,1]);
+        
         % Perform second stage filtering
-        X = PFBfiltNoSynth(X,CONFIG{2}.fi_coeff,CONFIG{2}.output_nt);
-        [spec,freq] = fi_radix2fft(X,CONFIG{2}.twiddle);
+        if DOFLOAT
+            X = PFBfiltNoSynth(X,CONFIG{2}.coeff,0);
+            spec = radix2fft(X,radix2twiddles(n2));
+        else
+            X = PFBfiltNoSynth(X,CONFIG{2}.fi_coeff,CONFIG{2}.output_nt);
+            spec = radix2fft(X,CONFIG{2}.twiddle);
+        end
         % 2nd stage frequency bin is relative to each coarse bin
+        freq = [(0:1/n2:0.5),((-0.5+1/n2):1/n2:-1/n2)].';
         freq = (FS/n1).*freq;
         % Reorder to make sure frequencies come out negative first
         spec = [spec(freq<0,:,:);spec(freq>=0,:,:)];
@@ -111,7 +139,7 @@ function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST)
         
         % Absolute center frequencies is cross sum of coarse + fine
         % row # index fine freq, col # index coarse freq
-        freq = repmat(freq,1,length(coarse_freq))+repmat(coarse_freq',length(freq),1);
+        freq = repmat(freq,1,length(coarse_freq))+repmat(coarse_freq.',length(freq),1);
         
         % Now merge fine and coarse dimensions together
         spec = permute(spec,[1,3,2]);
@@ -119,17 +147,21 @@ function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST)
         % Do exact same for freq matrix to keep track of frequency bins
         freq = reshape(freq,[],size(freq,3));
         
-        % Quantize to fewer bits if QB(2) is set
-        if (QB(2) > 0 && QB(2) < 23)
+        % Quantize to fewer bits if not fixed point and QB(2) is set
+        if ~DOFLOAT && (QB(2) > 0 && QB(2) < 23)
             spec = quantize(spec/2^(24-QB(2)),numerictype(1,QB(2),0),'Round','Saturate');
         end
         
         % Store output of 2nd stage
-        output{2}.out = spec;
+        if DOFLOAT
+            output{2}.out = spec;
+        else
+            output{2}.out = spec.removefimath;
+        end
         output{2}.fbins = freq;
         
         % Do more bit histograms if flag is set
-        if BITHIST
+        if exist('bmax','var')
             output{2}.bithist_inp = fiBitHist(S_IN,bmax);
             output{2}.bithist_filtout = fiBitHist(X,bmax);
             output{2}.bithist_fftout = fiBitHist(spec,bmax);

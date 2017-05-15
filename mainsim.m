@@ -161,8 +161,8 @@ if ~exist('PFBsettings','var')
 end
 if SIM_PARAM.DO_FLOAT_PT
     SIM_OUTPUT.floatsim.sig = {struct(),struct()};
-    SIM_OUTPUT.floatsim.sig{1}.stage = PFBChannelize_float(FS,double(SIM_INPUT.RAW{1}),PFBdata,CHSEL,CHGAIN);
-    SIM_OUTPUT.floatsim.sig{2}.stage = PFBChannelize_float(FS,double(SIM_INPUT.RAW{2}),PFBdata,CHSEL,CHGAIN);
+    SIM_OUTPUT.floatsim.sig{1}.stage = PFBChannelize(FS,SIM_INPUT.RAW{1},PFBdata,CHSEL,CHGAIN,QB,SIM_PARAM.DO_BIT_HIST,1);
+    SIM_OUTPUT.floatsim.sig{2}.stage = PFBChannelize(FS,SIM_INPUT.RAW{2},PFBdata,CHSEL,CHGAIN,QB,SIM_PARAM.DO_BIT_HIST,1);
     SIM_OUTPUT.floatsim.visibilities = crossMultSum(...
                             SIM_OUTPUT.floatsim.sig{1}.stage{2}.out,...
                             SIM_OUTPUT.floatsim.sig{2}.stage{2}.out,...
@@ -171,8 +171,8 @@ if SIM_PARAM.DO_FLOAT_PT
 end
 if SIM_PARAM.DO_FIXED_PT
     SIM_OUTPUT.intsim.sig = {struct(),struct()};
-    SIM_OUTPUT.intsim.sig{1}.stage = PFBChannelize(FS,SIM_INPUT.RAW{1},PFBdata,CHSEL,CHGAIN,QB,SIM_PARAM.DO_BIT_HIST);
-    SIM_OUTPUT.intsim.sig{2}.stage = PFBChannelize(FS,SIM_INPUT.RAW{2},PFBdata,CHSEL,CHGAIN,QB,SIM_PARAM.DO_BIT_HIST);
+    SIM_OUTPUT.intsim.sig{1}.stage = PFBChannelize(FS,SIM_INPUT.RAW{1},PFBdata,CHSEL,CHGAIN,QB,SIM_PARAM.DO_BIT_HIST,0);
+    SIM_OUTPUT.intsim.sig{2}.stage = PFBChannelize(FS,SIM_INPUT.RAW{2},PFBdata,CHSEL,CHGAIN,QB,SIM_PARAM.DO_BIT_HIST,0);
     SIM_OUTPUT.intsim.visibilities = crossMultSum(...
                             SIM_OUTPUT.intsim.sig{1}.stage{2}.out,...
                             SIM_OUTPUT.intsim.sig{2}.stage{2}.out,...
