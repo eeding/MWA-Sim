@@ -85,7 +85,7 @@ function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST,DOFLOAT)
     freq = FS.*freq;
 
     % Quantize to fewer bits if fixed point and QB(1) is set
-    if ~DOFLOAT && (QB(1) > 0 && QB(1) < 15)
+    if ~DOFLOAT && (QB(1) > 0 && QB(1) < CONFIG{1}.output_nt.WordLength-1)
         spec = quantize(spec/2^(16-QB(1)),numerictype(1,QB(1),0),'Round','Saturate');
     end
     
@@ -148,7 +148,7 @@ function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST,DOFLOAT)
         freq = reshape(freq,[],size(freq,3));
         
         % Quantize to fewer bits if not fixed point and QB(2) is set
-        if ~DOFLOAT && (QB(2) > 0 && QB(2) < 23)
+        if ~DOFLOAT && (QB(2) > 0 && QB(2) < CONFIG{2}.output_nt.WordLength-1)
             spec = quantize(spec/2^(24-QB(2)),numerictype(1,QB(2),0),'Round','Saturate');
         end
         
