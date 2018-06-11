@@ -26,7 +26,7 @@ function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST,DOFLOAT)
 %      number of bits kept in the re-quantization that occcurs after each
 %      stage. To match the physical system, use [5,4], which makes 5 bit
 %      quantization after PFB1 and 4 bit quantization after PFB2.
-%      Constraints: 0 < QB(1) < 15, 0 < QB(2) < 23, integer values only.
+%      Constraints: 0 < QB(1) < 15, 0 < QB(2) < 31, integer values only.
 %      Set any (or both) QB value to 0 to skip re-quantization step for the
 %      corresponding stage.
 %   -> BITHIST is a debug flag. If set, bit histograms at various points
@@ -86,7 +86,7 @@ function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST,DOFLOAT)
 
     % Quantize to fewer bits if fixed point and QB(1) is set
     if ~DOFLOAT && (QB(1) > 0 && QB(1) < CONFIG{1}.output_nt.WordLength-1)
-        spec = quantize(spec/2^(16-QB(1)),numerictype(1,QB(1),0),'Round','Saturate');
+        spec = quantize(spec/2^(CONFIG{1}.output_nt.WordLength-QB(1)),numerictype(1,QB(1),0),'Round','Saturate');
     end
     
     % Store results for first stage
@@ -152,7 +152,7 @@ function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST,DOFLOAT)
         
         % Quantize to fewer bits if not fixed point and QB(2) is set
         if ~DOFLOAT && (QB(2) > 0 && QB(2) < CONFIG{2}.output_nt.WordLength-1)
-            spec = quantize(spec/2^(24-QB(2)),numerictype(1,QB(2),0),'Round','Saturate');
+            spec = quantize(spec/2^(CONFIG{2}.output_nt.WordLength-QB(2)),numerictype(1,QB(2),0),'Round','Saturate');
         end
         
         % Store output of 2nd stage
