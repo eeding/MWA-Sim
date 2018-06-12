@@ -84,11 +84,6 @@ function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST,DOFLOAT)
     freq = [(0:1/n1:0.5),((-0.5+1/n1):1/n1:-1/n1)].';
     freq = FS.*freq;
 
-    % Quantize to fewer bits if fixed point and QB(1) is set
-    if ~DOFLOAT && (QB(1) > 0 && QB(1) < CONFIG{1}.output_nt.WordLength-1)
-        spec = quantize(spec/2^(CONFIG{1}.output_nt.WordLength-QB(1)),numerictype(1,QB(1),0),'Round','Saturate');
-    end
-    
     % Store results for first stage
     if DOFLOAT
         output{1}.out = spec;
@@ -118,6 +113,12 @@ function output = PFBChannelize(FS,S_IN,CONFIG,CHSEL,CHGAIN,QB,BITHIST,DOFLOAT)
         coarse_freq = output{1}.fbins(CHSEL);
         % Scale each channel by appropriate gain
         S_IN = S_IN.*repmat(CHGAIN.',1,size(S_IN,2),size(S_IN,3));
+        
+        % Quantize to fewer bits if fixed point and QB(1) is set
+        if ~DOFLOAT && (QB(1) > 0 && QB(1) < CONFIG{1}.output_nt.WordLength-1)
+            S_IN = quantize(S_IN/2^(CONFIG{1}.output_nt.WordLength-QB(1)),numerictype(1,QB(1),0),'Round','Saturate');
+        end
+                
         % Move coarse channel index to dimension 3 so they will be acted on
         % in parallel for second stage
         X = permute(S_IN,[3,2,1]);
